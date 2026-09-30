@@ -75,9 +75,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         const apiError = toApiError(error);
         // DummyJSON answers wrong credentials with 400 "Invalid credentials".
         if (apiError.status === 400 || apiError.status === 401) {
-          throw new Error('Incorrect username or password.');
+          throw new Error('Incorrect username or password.', { cause: error });
         }
-        throw new Error(apiError.message);
+        throw new Error(apiError.message, { cause: error });
       }
     })().finally(() => {
       loginPromise = null;

@@ -46,7 +46,10 @@ export function todoToEvent(todo: Todo, anchor: DateKey, timeZone: string, now: 
   // 37 is coprime with 50, so ids spread evenly over the 50 weekdays of 10 weeks.
   const slot = (id * 37) % (WEEKS_SPREAD * 5);
   const day = addDays(firstMonday, Math.floor(slot / 5) * 7 + (slot % 5));
-  const startMinutes = (8 + ((id * 13) % 10)) * 60 + ((id * 7) % 4) * 15; // 08:00-17:45 on 15-min steps
+  // Ids sharing a day slot differ by multiples of 50; `round` spreads them across the working day.
+  const round = Math.floor((id - 1) / 50);
+  const hour = 8 + (((id * 13) % 10) + round * 2) % 10;
+  const startMinutes = hour * 60 + ((id * 7) % 4) * 15; // 08:00-17:45 on 15-minute steps
   const start = zonedToUtc(day, startMinutes, timeZone);
   const end = start + DURATIONS[id % DURATIONS.length] * 60_000;
 
