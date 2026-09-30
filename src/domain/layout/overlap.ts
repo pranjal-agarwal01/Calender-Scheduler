@@ -73,13 +73,19 @@ export interface SpanItem {
   id: string;
   startCol: number;
   endCol: number; // inclusive
+  /** Tie-breaker among equal spans, e.g. start time so chips read top-to-bottom chronologically. */
+  order?: number;
 }
 
 export function packLanes(items: SpanItem[]): Map<string, number> {
   const lanes = new Map<string, number>();
   const laneEnds: number[] = []; // last occupied column per lane
   const sorted = [...items].sort(
-    (a, b) => a.startCol - b.startCol || b.endCol - b.startCol - (a.endCol - a.startCol) || a.id.localeCompare(b.id),
+    (a, b) =>
+      a.startCol - b.startCol ||
+      b.endCol - b.startCol - (a.endCol - a.startCol) ||
+      (a.order ?? 0) - (b.order ?? 0) ||
+      a.id.localeCompare(b.id),
   );
   for (const item of sorted) {
     let lane = laneEnds.findIndex((end) => end < item.startCol);
