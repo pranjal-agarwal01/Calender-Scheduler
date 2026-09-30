@@ -69,9 +69,8 @@ export function useKeyboardMove(options: {
         case 'Enter': {
           event.preventDefault();
           ui.setKeyboardMove(null);
-          const resized = end - start !== occurrence.end - occurrence.start;
           if (start === occurrence.start && end === occurrence.end) announce('No change.');
-          else void onCommit(occurrence, start, end, resized ? 'resize' : 'move');
+          else void onCommit(occurrence, start, end, start !== occurrence.start ? 'move' : 'resize');
           return true;
         }
         case 'Escape':

@@ -26,6 +26,31 @@ interface Props extends EventHandlers {
 const MIN_HEIGHT = 18;
 
 /**
+ * Layout creates fresh segment objects on every change, so compare what is
+ * drawn instead of object identity. Occurrences are cached per event, so for
+ * unchanged events `occurrence` is the same object and the block is skipped.
+ */
+function sameBlock(a: Props, b: Props): boolean {
+  const x = a.segment;
+  const y = b.segment;
+  return (
+    x.occurrence === y.occurrence &&
+    x.startMin === y.startMin &&
+    x.endMin === y.endMin &&
+    x.box.left === y.box.left &&
+    x.box.width === y.box.width &&
+    x.continuesBefore === y.continuesBefore &&
+    x.continuesAfter === y.continuesAfter &&
+    a.timeZone === b.timeZone &&
+    a.selected === b.selected &&
+    a.dimmed === b.dimmed &&
+    a.onPointerDown === b.onPointerDown &&
+    a.onClick === b.onClick &&
+    a.onKeyDown === b.onKeyDown
+  );
+}
+
+/**
  * One event (or one day's piece of a multi-day event) in the week grid.
  * Memoised: occurrences are cached per event, so during a re-render only
  * blocks whose event actually changed are re-rendered.
@@ -101,4 +126,4 @@ export const TimedEventBlock = memo(function TimedEventBlock({
       )}
     </button>
   );
-});
+}, sameBlock);

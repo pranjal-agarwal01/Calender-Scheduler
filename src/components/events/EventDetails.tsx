@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon, type IconName } from '../ui/Icon';
@@ -20,6 +20,7 @@ import type { Occurrence } from '../../domain/types';
 import { toApiError } from '../../api/apiError';
 
 interface EventDetailsProps {
+  eventId: string;
   timeZone: string;
   search: string;
   onDelete: (occurrence: Occurrence) => Promise<boolean>;
@@ -29,8 +30,7 @@ interface EventDetailsProps {
  * Route component for /events/:eventId. Because the id comes from the URL,
  * a refresh reopens the same event; unknown ids show "Event not found".
  */
-export function EventDetails({ timeZone, search, onDelete }: EventDetailsProps) {
-  const { eventId = '' } = useParams();
+export function EventDetails({ eventId, timeZone, search, onDelete }: EventDetailsProps) {
   const navigate = useNavigate();
   const loadState = useCalendarStore((s) => s.loadState);
   const events = useCalendarStore((s) => s.events);

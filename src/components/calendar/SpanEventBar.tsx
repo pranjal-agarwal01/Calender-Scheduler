@@ -17,6 +17,30 @@ interface Props extends EventHandlers {
   dimmed: boolean;
 }
 
+/** Compares what is drawn (layout creates new bar objects on every change). */
+function sameBar(a: Props, b: Props): boolean {
+  const x = a.bar;
+  const y = b.bar;
+  return (
+    x.occurrence === y.occurrence &&
+    x.startCol === y.startCol &&
+    x.endCol === y.endCol &&
+    x.lane === y.lane &&
+    x.continuesBefore === y.continuesBefore &&
+    x.continuesAfter === y.continuesAfter &&
+    x.isChip === y.isChip &&
+    a.timeZone === b.timeZone &&
+    a.cols === b.cols &&
+    a.laneHeight === b.laneHeight &&
+    a.topOffset === b.topOffset &&
+    a.selected === b.selected &&
+    a.dimmed === b.dimmed &&
+    a.onPointerDown === b.onPointerDown &&
+    a.onClick === b.onClick &&
+    a.onKeyDown === b.onKeyDown
+  );
+}
+
 /** A horizontal event: all-day/multi-day bar, or a compact timed "chip" in month view. */
 export const SpanEventBar = memo(function SpanEventBar({
   bar,
@@ -68,4 +92,4 @@ export const SpanEventBar = memo(function SpanEventBar({
       {continuesAfter && <Icon name="chevronRight" size={12} className="-mr-1 ml-auto shrink-0" />}
     </button>
   );
-});
+}, sameBar);

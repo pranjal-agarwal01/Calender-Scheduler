@@ -132,6 +132,16 @@ export function WeekView(props: WeekViewProps) {
     onEdge: onNavigate,
   });
 
+  // Hour labels and cell names only depend on the week and zone: format them once, not on every render.
+  const hourLabels = useMemo(
+    () => HOURS.map((hour) => formatHourLabel(zonedToUtc(days[0], hour * 60, timeZone), timeZone)),
+    [days, timeZone],
+  );
+  const cellLabels = useMemo(
+    () => days.map((day) => HOURS.map((hour) => `${formatLongDate(day)}, ${formatHourLabel(zonedToUtc(day, hour * 60, timeZone), timeZone)}`)),
+    [days, timeZone],
+  );
+
   // Events starting in each hour slot, for the grid cells' accessible names.
   const counts = useMemo(() => {
     const table = days.map(() => new Array<number>(24).fill(0));
@@ -249,7 +259,7 @@ export function WeekView(props: WeekViewProps) {
                   className="absolute right-2 -translate-y-1/2 text-[10px] text-slate-400"
                   style={{ top: hour * HOUR_HEIGHT }}
                 >
-                  {formatHourLabel(zonedToUtc(days[0], hour * 60, timeZone), timeZone)}
+                  {hourLabels[hour]}
                 </span>
               ),
             )}
@@ -280,7 +290,7 @@ export function WeekView(props: WeekViewProps) {
               {HOURS.map((hour) => (
                 <div key={hour} role="row" className="contents">
                   <span role="rowheader" className="sr-only">
-                    {formatHourLabel(zonedToUtc(days[0], hour * 60, timeZone), timeZone)}
+                    {hourLabels[hour]}
                   </span>
                   {days.map((day, col) => {
                     const count = counts[col][hour];
@@ -288,9 +298,7 @@ export function WeekView(props: WeekViewProps) {
                       <div
                         key={day}
                         {...grid.cellProps(hour, col)}
-                        aria-label={`${formatLongDate(day)}, ${formatHourLabel(zonedToUtc(day, hour * 60, timeZone), timeZone)}${
-                          count ? `, ${count} event${count > 1 ? 's' : ''} starting` : ''
-                        }`}
+                        aria-label={`${cellLabels[col][hour]}${count ? `, ${count} event${count > 1 ? 's' : ''} starting` : ''}`}
                         className={`border-b border-r border-slate-100 outline-none focus-visible:bg-brand-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
                           day === today ? 'bg-brand-50/30' : ''
                         }`}

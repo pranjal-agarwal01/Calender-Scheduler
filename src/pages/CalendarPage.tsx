@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useMatch, useNavigate } from 'react-router';
 import { AppHeader } from '../components/layout/AppHeader';
 import { Sidebar } from '../components/layout/Sidebar';
 import { WeekView, type CreateRequest } from '../components/calendar/WeekView';
@@ -36,7 +36,8 @@ export function CalendarPage() {
   const calendar = useCalendar();
   const { timeZone } = calendar;
   const navigate = useNavigate();
-  const { eventId } = useParams();
+  // This layout route renders for /calendar and /events/:eventId; read the id from the URL match.
+  const eventId = useMatch('/events/:eventId')?.params.eventId;
   const loadState = useCalendarStore((s) => s.loadState);
   const loadError = useCalendarStore((s) => s.loadError);
   const seedAnchor = useCalendarStore((s) => s.seedAnchor);
@@ -104,7 +105,10 @@ export function CalendarPage() {
     [calendar.date, now, openEditor, timeZone, today],
   );
 
-  const handleDelete = useCallback((occurrence: Occurrence) => void actions.deleteOccurrence(occurrence), [actions]);
+  // Depend on the stable callbacks, not the `actions` object (new every render), so the
+  // event handlers passed to memoised event blocks keep their identity.
+  const { deleteOccurrence, commitTimeChange, createEvent, updateOccurrence } = actions;
+  const handleDelete = useCallback((occurrence: Occurrence) => void deleteOccurrence(occurrence), [deleteOccurrence]);
   const { goPrev, goNext, goToday } = calendar;
   const handleNavigate = useCallback((direction: -1 | 1) => (direction < 0 ? goPrev() : goNext()), [goPrev, goNext]);
 
@@ -171,7 +175,7 @@ export function CalendarPage() {
                 now={now}
                 onOpen={openOccurrence}
                 onCreate={openCreate}
-                onTimeChange={actions.commitTimeChange}
+                onTimeChange={commitTimeChange}
                 onDelete={handleDelete}
                 onNavigate={handleNavigate}
               />
@@ -185,7 +189,7 @@ export function CalendarPage() {
                 today={today}
                 onOpen={openOccurrence}
                 onCreate={openCreate}
-                onTimeChange={actions.commitTimeChange}
+                onTimeChange={commitTimeChange}
                 onDelete={handleDelete}
                 onShowWeek={calendar.showWeekOf}
               />
@@ -212,11 +216,13 @@ export function CalendarPage() {
           key={editorVersion}
           editor={editor}
           timeZone={timeZone}
-          onCreate={actions.createEvent}
-          onUpdate={(occurrence, draft) => actions.updateOccurrence(occurrence, draft, 'Edit')}
+          onCreate={createEvent}
+          onUpdate={(occurrence, draft) => updateOccurrence(occurrence, draft, 'Edit')}
         />
       )}
-      {eventId !== undefined && <EventDetails timeZone={timeZone} search={calendar.search} onDelete={actions.deleteOccurrence} />}
+      {eventId !== undefined && (
+        <EventDetails eventId={eventId} timeZone={timeZone} search={calendar.search} onDelete={deleteOccurrence} />
+      )}
       {scopePrompt && <ScopeDialog />}
       {devOpen && <DevPanel onClose={() => setDevOpen(false)} timeZone={timeZone} anchor={seedAnchor ?? today} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}

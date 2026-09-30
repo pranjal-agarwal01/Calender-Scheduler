@@ -38,7 +38,7 @@ export function Sidebar({ calendar, today, onCreate }: SidebarProps) {
         />
         <p className="text-xs text-slate-500">
           {filtered
-            ? `Showing ${calendar.occurrences.length} of ${calendar.totalInRange} events in view.`
+            ? `Showing ${calendar.visibleCount} of ${calendar.totalCount} events in view.`
             : 'Showing everyone’s events.'}
         </p>
       </section>

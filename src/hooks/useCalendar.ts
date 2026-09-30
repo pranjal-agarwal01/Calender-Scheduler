@@ -6,6 +6,7 @@ import {
   addDays,
   addMonths,
   DAY_MS,
+  dateKeyToUtcMs,
   daysInMonth,
   diffDays,
   parseDateKey,
@@ -60,6 +61,15 @@ export function useCalendar() {
     [allOccurrences, attendeeKey],
   );
 
+  // The expansion is padded by a day; count only what is actually on screen.
+  const counts = useMemo(() => {
+    const floatingStart = dateKeyToUtcMs(days[0]);
+    const floatingEnd = dateKeyToUtcMs(addDays(days[days.length - 1], 1));
+    const inView = (o: Occurrence) =>
+      o.allDay ? o.start < floatingEnd && o.end > floatingStart : o.start < rangeEnd && o.end > rangeStart;
+    return { visible: occurrences.filter(inView).length, total: allOccurrences.filter(inView).length };
+  }, [occurrences, allOccurrences, days, rangeStart, rangeEnd]);
+
   const title = view === 'week' ? formatDateKeyRange(days[0], days[6]) : formatMonthYear(date);
 
   const goToDate = useCallback((next: DateKey) => update({ date: next }), [update]);
@@ -87,7 +97,8 @@ export function useCalendar() {
     rangeStart,
     rangeEnd,
     occurrences,
-    totalInRange: allOccurrences.length,
+    visibleCount: counts.visible,
+    totalCount: counts.total,
     title,
     goPrev,
     goNext,

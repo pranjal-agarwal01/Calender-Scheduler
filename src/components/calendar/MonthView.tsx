@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Occurrence } from '../../domain/types';
 import { buildSpanRow } from '../../domain/layout/calendarLayout';
 import { addDays, dateKeyToUtcMs, parseDateKey, type DateKey } from '../../domain/time/dateKey';
@@ -30,6 +30,7 @@ interface MonthViewProps {
 
 const DAY_LABEL_HEIGHT = 26;
 const LANE_HEIGHT = 22;
+const MORE_HEIGHT = 20;
 
 export function MonthView(props: MonthViewProps) {
   const { days, month, timeZone, occurrences, selectedKey, today, onOpen, onCreate, onTimeChange, onDelete, onShowWeek } = props;
@@ -38,10 +39,25 @@ export function MonthView(props: MonthViewProps) {
   const [moreDay, setMoreDay] = useState<{ day: DateKey; items: Occurrence[] } | null>(null);
 
   const weeks = useMemo(() => Array.from({ length: days.length / 7 }, (_, w) => days.slice(w * 7, w * 7 + 7)), [days]);
+  const [visibleLanes, setVisibleLanes] = useState(MONTH_VISIBLE_LANES);
   const rows = useMemo(
-    () => weeks.map((week) => buildSpanRow(occurrences, week, timeZone, () => true, MONTH_VISIBLE_LANES)),
-    [weeks, occurrences, timeZone],
+    () => weeks.map((week) => buildSpanRow(occurrences, week, timeZone, () => true, visibleLanes)),
+    [weeks, occurrences, timeZone, visibleLanes],
   );
+
+  // Show as many event rows as fit in a week row (taller screens show more before "+N more").
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const measure = () => {
+      const rowHeight = container.clientHeight / weeks.length;
+      setVisibleLanes(Math.max(MONTH_VISIBLE_LANES, Math.floor((rowHeight - DAY_LABEL_HEIGHT - MORE_HEIGHT) / LANE_HEIGHT)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [weeks.length]);
 
   const handleDrag = useCallback(
     (result: DayDragResult) => {
@@ -117,7 +133,7 @@ export function MonthView(props: MonthViewProps) {
         aria-colcount={7}
         onKeyDown={grid.onKeyDown}
         className="grid min-h-0 flex-1 select-none overflow-y-auto"
-        style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(${DAY_LABEL_HEIGHT + MONTH_VISIBLE_LANES * LANE_HEIGHT + 20}px, 1fr))` }}
+        style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(${DAY_LABEL_HEIGHT + MONTH_VISIBLE_LANES * LANE_HEIGHT + MORE_HEIGHT}px, 1fr))` }}
       >
         <div role="row" className="sr-only">
           {weeks[0].map((day) => (
@@ -166,14 +182,18 @@ export function MonthView(props: MonthViewProps) {
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => setMoreDay({ day, items: layout.itemsPerCol[col] })}
-                        className="mt-auto mb-0.5 ml-1 self-start rounded px-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-brand-700"
+                        className="absolute rounded px-1 text-left text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-brand-700"
+                        style={{
+                          top: DAY_LABEL_HEIGHT + visibleLanes * LANE_HEIGHT + 2,
+                          left: `calc(${(col / 7) * 100}% + 4px)`,
+                        }}
                       >
                         +{hidden} more
                       </button>
                     )}
                     {/* Bars start in this cell and are positioned against the row, so they can span days. */}
                     {layout.bars
-                      .filter((bar) => bar.startCol === col && bar.lane < MONTH_VISIBLE_LANES)
+                      .filter((bar) => bar.startCol === col && bar.lane < visibleLanes)
                       .map((bar) => (
                         <SpanEventBar
                           key={bar.key}

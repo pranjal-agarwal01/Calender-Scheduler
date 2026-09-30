@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { addMonths, parseDateKey, startOfMonth, type DateKey } from '../../domain/time/dateKey';
 import { formatDayNumber, formatLongDate, formatMonthYear, formatWeekdayNarrow } from '../../domain/time/format';
 import { visibleDays } from '../../hooks/useCalendar';
 import { IconButton } from '../ui/Button';
 
-/** Small month navigator in the sidebar. */
-export function MiniMonth({ selected, today, onSelect }: { selected: DateKey; today: DateKey; onSelect: (day: DateKey) => void }) {
+/** Small month navigator in the sidebar (memoised: it only changes with the selected date). */
+export const MiniMonth = memo(function MiniMonth({
+  selected,
+  today,
+  onSelect,
+}: {
+  selected: DateKey;
+  today: DateKey;
+  onSelect: (day: DateKey) => void;
+}) {
   const [month, setMonth] = useState(() => startOfMonth(selected));
   const [lastSelected, setLastSelected] = useState(selected);
   // Follow the main calendar when it navigates to another month.
@@ -61,4 +69,4 @@ export function MiniMonth({ selected, today, onSelect }: { selected: DateKey; to
       </div>
     </div>
   );
-}
+});

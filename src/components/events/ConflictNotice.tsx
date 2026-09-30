@@ -1,39 +1,14 @@
-import { useMemo } from 'react';
-import { useCalendarStore } from '../../store/calendarStore';
 import { useUsersStore, userName } from '../../store/usersStore';
-import { findConflicts } from '../../domain/conflicts';
+import type { Conflict } from '../../domain/conflicts';
 import { formatTimeRange } from '../../domain/time/format';
-import type { EventDraft } from '../../domain/types';
 import { Icon } from '../ui/Icon';
 
-/** Live "already busy" warning, recomputed as times or attendees change. Non-blocking. */
-export function ConflictNotice({
-  draft,
-  attendeeIds,
-  exclude,
-  timeZone,
-}: {
-  draft: EventDraft | null;
-  attendeeIds: number[];
-  exclude: { eventId: string | null; seriesId: string | null };
-  timeZone: string;
-}) {
-  const events = useCalendarStore((s) => s.events);
+/** Live, non-blocking "already busy" warning for the chosen attendees. */
+export function ConflictNotice({ conflicts, timeZone }: { conflicts: Conflict[]; timeZone: string }) {
   const users = useUsersStore((s) => s.byId);
-  const start = draft?.start;
-  const end = draft?.end;
-  const allDay = draft?.allDay;
-
-  const conflicts = useMemo(() => {
-    if (start === undefined || end === undefined || allDay) return [];
-    return findConflicts(events, { start, end, attendeeIds }, exclude);
-    // exclude is derived from the (stable) editor state
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, start, end, allDay, attendeeIds, exclude.eventId, exclude.seriesId]);
-
   if (!conflicts.length) return null;
 
-  const byPerson = new Map<number, typeof conflicts>();
+  const byPerson = new Map<number, Conflict[]>();
   for (const c of conflicts) byPerson.set(c.attendeeId, [...(byPerson.get(c.attendeeId) ?? []), c]);
 
   return (

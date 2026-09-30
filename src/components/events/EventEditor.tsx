@@ -10,11 +10,12 @@ import { FieldError } from './FieldError';
 import { draftFromValues, shiftEndWithStart, valuesFromDraft, type EventFormValues, type FormField } from '../../domain/eventForm';
 import { describeRule } from '../../domain/recurrence/describe';
 import { EVENT_COLORS, type EventDraft, type Occurrence, type Weekday } from '../../domain/types';
-import { weekdayOf } from '../../domain/time/dateKey';
+import { isValidDateKey, weekdayOf } from '../../domain/time/dateKey';
 import { formatZoneOffset } from '../../domain/time/format';
 import { EVENT_COLOR_CLASSES } from '../calendar/eventColors';
 import { useUiStore, type EditorState } from '../../store/uiStore';
 import { REMINDER_OPTIONS } from '../../config';
+import { useConflicts } from '../../hooks/useConflicts';
 
 const FIELD_IDS: Record<FormField, string> = {
   title: 'ev-title',
@@ -82,6 +83,8 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
     editor.mode === 'edit'
       ? { eventId: editor.occurrence.event.id, seriesId: editor.occurrence.seriesId }
       : { eventId: null, seriesId: null };
+  const conflicts = useConflicts(draft, values.attendeeIds, exclude);
+  const busyIds = useMemo(() => new Set(conflicts.map((c) => c.attendeeId)), [conflicts]);
 
   return (
     <Modal
@@ -148,8 +151,8 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
                 onChange={(e) => {
                   const startDate = e.target.value;
                   const patch: Partial<EventFormValues> = { startDate };
-                  // Keep a weekly rule's default day in sync with the start date while untouched.
-                  if (values.repeat === 'weekly' && values.byWeekday.length === 1 && startDate) {
+                  // The default weekly day follows the start date until the user picks several days.
+                  if (values.byWeekday.length <= 1 && isValidDateKey(startDate)) {
                     patch.byWeekday = [weekdayOf(startDate) as Weekday];
                   }
                   updateStart(patch);
@@ -213,7 +216,14 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
           <select
             id="ev-repeat"
             value={values.repeat}
-            onChange={(e) => update({ repeat: e.target.value as EventFormValues['repeat'] })}
+            onChange={(e) => {
+              const repeat = e.target.value as EventFormValues['repeat'];
+              const patch: Partial<EventFormValues> = { repeat };
+              if (repeat === 'weekly' && values.byWeekday.length <= 1 && isValidDateKey(values.startDate)) {
+                patch.byWeekday = [weekdayOf(values.startDate) as Weekday];
+              }
+              update(patch);
+            }}
             className={`${inputClass()} w-full`}
           >
             <option value="none">Does not repeat</option>
@@ -230,8 +240,13 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
         </div>
 
         <div className="space-y-2">
-          <AttendeePicker label="Attendees" value={values.attendeeIds} onChange={(attendeeIds) => update({ attendeeIds })} />
-          <ConflictNotice draft={draft} attendeeIds={values.attendeeIds} exclude={exclude} timeZone={timeZone} />
+          <AttendeePicker
+            label="Attendees"
+            value={values.attendeeIds}
+            onChange={(attendeeIds) => update({ attendeeIds })}
+            busyIds={busyIds}
+          />
+          <ConflictNotice conflicts={conflicts} timeZone={timeZone} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

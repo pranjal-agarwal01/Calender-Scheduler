@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { memo, useId, useMemo } from 'react';
 import { browserTimeZone } from '../../domain/time/zoned';
 import { formatZoneOffset } from '../../domain/time/format';
 import { Icon } from '../ui/Icon';
@@ -23,8 +23,8 @@ function allZones(): string[] {
   }
 }
 
-/** Display time zone. Changing it only changes how UTC times are shown. */
-export function TimezoneSelect({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
+/** Display time zone. Changing it only changes how UTC times are shown. Memoised: ~400 options. */
+export const TimezoneSelect = memo(function TimezoneSelect({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
   const id = useId();
   const local = browserTimeZone();
   const groups = useMemo(() => {
@@ -65,4 +65,4 @@ export function TimezoneSelect({ value, onChange }: { value: string; onChange: (
       <Icon name="chevronDown" size={14} className="pointer-events-none absolute right-2 text-slate-500" />
     </div>
   );
-}
+});
