@@ -67,12 +67,17 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
     }
     submitting.current = true;
     setSaving(true);
+    let ok = false;
     try {
-      const ok = editor.mode === 'create' ? onCreate(draft) : await onUpdate(editor.occurrence, draft);
-      if (ok) closeEditor();
+      ok = editor.mode === 'create' ? onCreate(draft) : await onUpdate(editor.occurrence, draft);
     } finally {
-      submitting.current = false;
-      setSaving(false);
+      // On success the guard stays set: extra clicks that land before the dialog
+      // unmounts must not create the event twice. Only a failed/cancelled save re-enables it.
+      if (ok) closeEditor();
+      else {
+        submitting.current = false;
+        setSaving(false);
+      }
     }
   };
 

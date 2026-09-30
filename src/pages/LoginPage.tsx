@@ -48,11 +48,10 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(username, password, expiresInMins);
-      navigate(from, { replace: true });
+      navigate(from, { replace: true }); // guard stays set: we are leaving this page
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sign-in failed. Please try again.');
       passwordRef.current?.select();
-    } finally {
       inFlight.current = false;
       setSubmitting(false);
     }

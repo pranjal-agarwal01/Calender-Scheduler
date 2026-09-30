@@ -79,10 +79,10 @@ export function useFocusTrap(
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       stack.splice(stack.indexOf(id), 1);
-      // Restore focus after React has removed the modal.
-      requestAnimationFrame(() => {
+      // Restore focus once React has removed the modal (a timer, not rAF, so it also runs in background tabs).
+      setTimeout(() => {
         if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
-      });
+      }, 0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the trap is set up once per open
   }, [active]);

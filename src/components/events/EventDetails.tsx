@@ -102,11 +102,16 @@ function DetailsContent({
     if (deletingRef.current) return; // one request, however many clicks
     deletingRef.current = true;
     setDeleting(true);
+    let deleted = false;
     try {
-      if (await onDelete(occurrence)) onClose();
+      deleted = await onDelete(occurrence);
     } finally {
-      deletingRef.current = false;
-      setDeleting(false);
+      // Keep the guard after a successful delete (the dialog is closing); re-enable if cancelled.
+      if (deleted) onClose();
+      else {
+        deletingRef.current = false;
+        setDeleting(false);
+      }
     }
   };
 
