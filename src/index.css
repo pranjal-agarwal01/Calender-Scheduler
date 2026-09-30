@@ -34,3 +34,10 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* While dragging an event: grabbing cursor everywhere and no accidental text selection. */
+body.is-dragging,
+body.is-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
