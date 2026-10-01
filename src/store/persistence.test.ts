@@ -44,21 +44,22 @@ describe('persistence', () => {
 
   it('backs up and rejects unparseable data', () => {
     const storage = new MemoryStorage();
-    storage.setItem(storageKey(3), '{"schemaVersion":2,"events":[');
+    storage.setItem(storageKey(3), '{"schemaVersion":1,"events":[');
     const outcome = loadCalendar(3, storage);
     expect(outcome.kind).toBe('corrupt');
-    expect(storage.getItem(`${storageKey(3)}.corrupt`)).toBe('{"schemaVersion":2,"events":[');
+    expect(storage.getItem(`${storageKey(3)}.corrupt`)).toBe('{"schemaVersion":1,"events":[');
   });
 
-  it('refuses data written by a newer schema', () => {
+  it('refuses data with a missing or unknown schema version', () => {
     expect(parsePersisted(JSON.stringify({ schemaVersion: 99, events: [] }))).toHaveProperty('error');
+    expect(parsePersisted(JSON.stringify({ events: [] }))).toHaveProperty('error');
   });
 
   it('drops invalid events but keeps the valid ones', () => {
     const good = makeEvent({ id: 'good' });
     const result = parsePersisted(
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: SCHEMA_VERSION,
         events: [good, { id: 'no-dates' }, { ...good, id: 'backwards', end: '2020-01-01T00:00:00.000Z' }, good, null],
       }),
     );
@@ -69,30 +70,12 @@ describe('persistence', () => {
   it('repairs recoverable fields instead of dropping the event', () => {
     const result = parsePersisted(
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: SCHEMA_VERSION,
         events: [{ ...makeEvent({ id: 'x' }), color: 'neon', timeZone: 'Nowhere/City', recurrence: { freq: 'hourly' } }],
       }),
     );
     if (!('data' in result)) throw new Error('expected data');
     expect(result.repaired).toBe(1);
     expect(result.data.events[0]).toMatchObject({ color: 'indigo', timeZone: 'UTC', recurrence: null });
-  });
-
-  it('migrates v1 payloads (epoch times, `attendees`) to the current schema', () => {
-    const v1 = {
-      version: 1,
-      events: {
-        a: { id: 'a', title: 'Old', start: Date.parse('2026-10-05T09:00:00Z'), end: Date.parse('2026-10-05T10:00:00Z'), attendees: [2, 3] },
-      },
-    };
-    const result = parsePersisted(JSON.stringify(v1));
-    if (!('data' in result)) throw new Error('expected data');
-    expect(result.migratedFrom).toBe(1);
-    expect(result.data.events[0]).toMatchObject({
-      id: 'a',
-      start: '2026-10-05T09:00:00.000Z',
-      end: '2026-10-05T10:00:00.000Z',
-      attendeeIds: [2, 3],
-    });
   });
 });

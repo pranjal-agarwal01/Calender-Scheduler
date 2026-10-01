@@ -115,7 +115,7 @@ function* monthlyDates(
 }
 
 /** Day of month for a monthly rule in a given month, or null if that month has no such day. */
-export function monthlyDay(
+function monthlyDay(
   mode: 'dayOfMonth' | 'nthWeekday' | 'lastWeekday',
   year: number,
   month: number,

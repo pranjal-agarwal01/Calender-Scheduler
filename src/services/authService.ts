@@ -24,7 +24,7 @@ function toAuthUser(data: AuthUser): AuthUser {
 }
 
 export const authService = {
-  /** POST /auth/login — returns the user plus access/refresh tokens. */
+  /** POST /auth/login: returns the user plus access/refresh tokens. */
   async login(username: string, password: string, expiresInMins: number): Promise<LoginResult> {
     const { data } = await http.post<LoginResponse>(
       '/auth/login',
@@ -34,7 +34,7 @@ export const authService = {
     return { user: toAuthUser(data), accessToken: data.accessToken, refreshToken: data.refreshToken };
   },
 
-  /** GET /auth/me — validates the stored token (refreshing it if expired) on reload. */
+  /** GET /auth/me: validates the stored token (refreshing it if expired) on reload. */
   async me(signal?: AbortSignal): Promise<AuthUser> {
     const { data } = await http.get<AuthUser>('/auth/me', { signal });
     return toAuthUser(data);

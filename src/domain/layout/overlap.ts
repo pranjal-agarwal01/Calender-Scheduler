@@ -1,6 +1,6 @@
 /**
  * Side-by-side layout for overlapping timed events in one day column
- * (Google Calendar style). Hand-written, O(n log n + n·c) where c = columns.
+ * (Google Calendar style). O(n log n + n·c) where c = columns.
  *
  * 1. Sort by start (longer first on ties) so long events claim the left.
  * 2. Split into clusters: groups of events connected by overlaps. Events in

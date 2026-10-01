@@ -17,7 +17,7 @@ export const userService = {
     return data;
   },
 
-  /** GET /users/search?q=ravi — callers debounce and abort stale searches. */
+  /** GET /users/search?q=ravi: callers debounce and abort stale searches. */
   async search(query: string, signal?: AbortSignal): Promise<User[]> {
     const { data } = await http.get<UsersPage>('/users/search', {
       params: { q: query, limit: 20, select: LIST_FIELDS },
@@ -26,7 +26,7 @@ export const userService = {
     return data.users;
   },
 
-  /** GET /users/{id} — full profile (phone, company...) for the details view. */
+  /** GET /users/{id}: full profile (phone, company...) for the details view. */
   async getById(id: number, signal?: AbortSignal): Promise<User> {
     const { data } = await http.get<User>(`/users/${id}`, { signal });
     return data;

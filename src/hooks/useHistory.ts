@@ -1,11 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useCalendarStore } from '../store/calendarStore';
-import { useUiStore } from '../store/uiStore';
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
-}
+import { shortcutsBlocked } from '../utils/keyboard';
 
 /** Undo/redo state for the toolbar, plus Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (and Ctrl+Y). */
 export function useHistory({ shortcuts = false }: { shortcuts?: boolean } = {}) {
@@ -23,10 +18,8 @@ export function useHistory({ shortcuts = false }: { shortcuts?: boolean } = {}) 
       const isUndo = key === 'z' && !event.shiftKey;
       const isRedo = (key === 'z' && event.shiftKey) || (key === 'y' && !event.shiftKey);
       if (!isUndo && !isRedo) return;
-      // Let text fields keep their native undo, and don't change data under an open dialog or a move.
-      if (isTypingTarget(event.target)) return;
-      const ui = useUiStore.getState();
-      if (ui.editor || ui.scopePrompt || ui.keyboardMove || document.querySelector('[aria-modal="true"]')) return;
+      // Text fields keep their native undo; data never changes under an open dialog.
+      if (shortcutsBlocked(event)) return;
       event.preventDefault();
       if (isUndo) undo();
       else redo();

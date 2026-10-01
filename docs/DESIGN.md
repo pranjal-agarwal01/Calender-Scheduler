@@ -50,13 +50,13 @@ All-day events are floating dates stored as UTC midnight, so they never shift be
 ## 3. Persistence and rollback
 
 **Persistence** (`store/persistence.ts`): one localStorage key per user holding
-`{ schemaVersion: 2, savedAt, seedAnchor, events[] }`, written 250 ms after each change and on `pagehide`.
+`{ schemaVersion: 1, savedAt, seedAnchor, events[] }`, written 250 ms after each change and on `pagehide`.
 Loading is layered:
 
-1. unparseable JSON, a wrong shape or a *newer* schema → the raw text is copied to `<key>.corrupt`, the user is
-   told, and the calendar is re-seeded;
-2. an older schema → migrations run in order (`v1` stored epoch-ms times and `attendees`; a test covers it);
-3. every event is validated; recoverable fields are repaired (e.g. unknown colour or zone), broken events are dropped
+1. unparseable JSON, a wrong shape or an unknown `schemaVersion` → the raw text is copied to `<key>.corrupt`,
+   the user is told, and the calendar is re-seeded (if the format ever changes, the version is bumped and the old
+   shape converted at this point instead);
+2. every event is validated; recoverable fields are repaired (e.g. unknown colour or zone), broken events are dropped
    individually, and the user sees how many.
 
 Seed events come from `GET /todos` (paged with `skip`, 254 in total); their times are pure arithmetic on the todo

@@ -47,7 +47,7 @@ function normaliseRule(rule: RecurrenceRule | null): string {
   });
 }
 
-export function sameRule(a: RecurrenceRule | null, b: RecurrenceRule | null): boolean {
+function sameRule(a: RecurrenceRule | null, b: RecurrenceRule | null): boolean {
   return normaliseRule(a) === normaliseRule(b);
 }
 
@@ -91,7 +91,7 @@ function applyDraft(event: CalendarEvent, draft: EventDraft, now: string): Calen
   };
 }
 
-export function newEventFromDraft(draft: EventDraft, ctx: PlanContext): CalendarEvent {
+function newEventFromDraft(draft: EventDraft, ctx: PlanContext): CalendarEvent {
   return applyDraft(
     {
       id: ctx.newId(),

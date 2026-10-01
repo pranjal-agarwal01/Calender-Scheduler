@@ -17,8 +17,8 @@ interface AttendeePickerProps {
 }
 
 /**
- * Searchable multi-select built from scratch, following the WAI-ARIA combobox
- * + listbox pattern: the input keeps focus, the active option is conveyed with
+ * Searchable multi-select following the WAI-ARIA combobox + listbox pattern:
+ * the input keeps focus, the active option is conveyed with
  * aria-activedescendant, Enter toggles, Backspace removes the last chip,
  * Escape closes the list (without closing the surrounding dialog).
  */

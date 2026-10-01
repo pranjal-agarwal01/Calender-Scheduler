@@ -17,9 +17,9 @@ const COMMON = [
 
 function allZones(): string[] {
   try {
-    return (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? COMMON;
+    return Intl.supportedValuesOf('timeZone');
   } catch {
-    return COMMON;
+    return COMMON; // very old browsers
   }
 }
 

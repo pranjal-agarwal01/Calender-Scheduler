@@ -8,7 +8,7 @@ import { dateKeyInZone, minutesInZone } from '../time/zoned';
 import { layoutDay, packLanes, type LayoutBox } from './overlap';
 
 /** First and last calendar day an occurrence touches (all-day events are floating dates). */
-export function occurrenceDayRange(occurrence: Occurrence, timeZone: string): { first: DateKey; last: DateKey } {
+function occurrenceDayRange(occurrence: Occurrence, timeZone: string): { first: DateKey; last: DateKey } {
   const lastInstant = Math.max(occurrence.start, occurrence.end - 1);
   if (occurrence.allDay) return { first: utcMsToDateKey(occurrence.start), last: utcMsToDateKey(lastInstant) };
   return { first: dateKeyInZone(occurrence.start, timeZone), last: dateKeyInZone(lastInstant, timeZone) };

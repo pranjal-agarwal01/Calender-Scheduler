@@ -69,25 +69,10 @@ export function formatDateKeyRange(start: DateKey, end: DateKey): string {
   return fmt.formatRange(dateKeyToUtcMs(start), dateKeyToUtcMs(end));
 }
 
-/** Full date + time of an instant, e.g. "Mon, Oct 5, 2026, 9:30 AM". */
-export function formatDateTime(ms: number, timeZone: string): string {
-  return formatter(
-    { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' },
-    timeZone,
-  ).format(ms);
-}
-
 /** "GMT+5:30" style offset label for a zone at a given instant. */
 export function formatZoneOffset(timeZone: string, at = Date.now()): string {
   const part = formatter({ timeZoneName: 'shortOffset' }, timeZone)
     .formatToParts(at)
     .find((p) => p.type === 'timeZoneName');
   return part?.value ?? timeZone;
-}
-
-export function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }

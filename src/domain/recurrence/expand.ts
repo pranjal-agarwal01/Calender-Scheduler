@@ -13,21 +13,21 @@ import { ruleDates } from './ruleDates';
 /** Safety net against malformed rules: never generate more than this many candidates per call. */
 const MAX_ITERATIONS = 20_000;
 
-export const OCCURRENCE_SEPARATOR = '~';
+const OCCURRENCE_SEPARATOR = '~';
 
 /** Zone whose wall clock a series repeats in. All-day events use floating UTC dates. */
 export function expansionZone(event: CalendarEvent): string {
   return event.allDay ? FLOATING_ZONE : event.timeZone;
 }
 
-export interface SeriesAnchor {
+interface SeriesAnchor {
   key: DateKey;
   minutes: number;
   zone: string;
   duration: number;
 }
 
-export function seriesAnchor(event: CalendarEvent): SeriesAnchor {
+function seriesAnchor(event: CalendarEvent): SeriesAnchor {
   const start = Date.parse(event.start);
   const end = Date.parse(event.end);
   const zone = expansionZone(event);
@@ -43,7 +43,7 @@ export function occurrenceKey(seriesId: string, originalStart: number): string {
   return `${seriesId}${OCCURRENCE_SEPARATOR}${originalStart}`;
 }
 
-export function parseOccurrenceKey(key: string): { seriesId: string; originalStart: number } | null {
+function parseOccurrenceKey(key: string): { seriesId: string; originalStart: number } | null {
   const at = key.lastIndexOf(OCCURRENCE_SEPARATOR);
   if (at <= 0) return null;
   const originalStart = Number(key.slice(at + 1));

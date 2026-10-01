@@ -36,9 +36,9 @@ export interface HistoryState {
   redoStack: Command[];
 }
 
-export const HISTORY_LIMIT = 100;
+const HISTORY_LIMIT = 100;
 
-export function applyChanges(events: EventsById, changes: EventChange[]): EventsById {
+function applyChanges(events: EventsById, changes: EventChange[]): EventsById {
   const next = { ...events };
   for (const change of changes) {
     if (change.after) next[change.id] = change.after;

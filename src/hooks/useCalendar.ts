@@ -94,8 +94,6 @@ export function useCalendar() {
     attendeeIds,
     search,
     days,
-    rangeStart,
-    rangeEnd,
     occurrences,
     visibleCount: counts.visible,
     totalCount: counts.total,

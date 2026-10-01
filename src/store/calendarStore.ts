@@ -164,9 +164,6 @@ export const useCalendarStore = create<CalendarState>((set, get) => {
           message: `${outcome.dropped} removed, ${outcome.repaired} repaired. Everything else was recovered.`,
         });
       }
-      if (outcome.migratedFrom) {
-        toast({ kind: 'info', title: `Calendar data upgraded from schema v${outcome.migratedFrom}` });
-      }
       return;
     }
     if (outcome.kind === 'corrupt') {

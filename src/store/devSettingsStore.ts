@@ -12,7 +12,7 @@ interface DevSettings {
 }
 
 const STORAGE_KEY = 'cal.dev.v1';
-export const DEFAULT_FAILURE_RATE = 0.2;
+const DEFAULT_FAILURE_RATE = 0.2;
 
 function load(): Pick<DevSettings, 'failureRate' | 'slowNetwork'> {
   try {

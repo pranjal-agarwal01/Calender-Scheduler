@@ -1,10 +1,11 @@
 /**
- * Browser persistence for events (DummyJSON stores nothing, so this IS the
- * source of truth).
+ * Browser persistence for events. DummyJSON stores nothing, so this is the
+ * source of truth.
  *
  * - One localStorage key per user: `cal.calendar.u<id>`.
- * - Every payload carries `schemaVersion`. Older payloads are upgraded by a
- *   chain of migrations; payloads from a newer app version are not touched.
+ * - Every payload carries `schemaVersion`. Data with an unknown version is not
+ *   trusted: it is backed up and the calendar is re-seeded. If the format ever
+ *   changes, bump SCHEMA_VERSION and convert the old shape in parsePersisted.
  * - Recovery is layered: unparseable JSON or a wrong top-level shape resets
  *   the calendar (keeping a backup of the raw text); a single bad event is
  *   dropped or repaired without losing the rest.
@@ -13,7 +14,7 @@ import { EVENT_COLORS, type CalendarEvent, type EventColor, type RecurrenceRule,
 import { isValidDateKey } from '../domain/time/dateKey';
 import { isValidTimeZone } from '../domain/time/zoned';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 1;
 
 export interface PersistedCalendar {
   schemaVersion: typeof SCHEMA_VERSION;
@@ -25,36 +26,10 @@ export interface PersistedCalendar {
 
 export type LoadOutcome =
   | { kind: 'empty' }
-  | { kind: 'loaded'; data: PersistedCalendar; dropped: number; repaired: number; migratedFrom: number | null }
+  | { kind: 'loaded'; data: PersistedCalendar; dropped: number; repaired: number }
   | { kind: 'corrupt'; reason: string; backupKey: string | null };
 
 export const storageKey = (userId: number) => `cal.calendar.u${userId}`;
-
-type Migration = (payload: Record<string, unknown>) => Record<string, unknown>;
-
-/**
- * migrations[n] upgrades a version-n payload to version n+1.
- * v1 stored times as epoch milliseconds and attendees under `attendees`.
- */
-const migrations: Record<number, Migration> = {
-  1: (payload) => {
-    const rawEvents = payload.events && typeof payload.events === 'object' ? Object.values(payload.events) : [];
-    return {
-      schemaVersion: 2,
-      savedAt: new Date().toISOString(),
-      seedAnchor: typeof payload.seedAnchor === 'string' ? payload.seedAnchor : null,
-      events: rawEvents.map((raw) => {
-        const e = (raw ?? {}) as Record<string, unknown>;
-        return {
-          ...e,
-          start: typeof e.start === 'number' ? new Date(e.start).toISOString() : e.start,
-          end: typeof e.end === 'number' ? new Date(e.end).toISOString() : e.end,
-          attendeeIds: e.attendeeIds ?? e.attendees ?? [],
-        };
-      }),
-    };
-  },
-};
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 const isIsoInstant = (v: unknown): v is string => isString(v) && !Number.isNaN(Date.parse(v));
@@ -86,7 +61,7 @@ function validateRule(raw: unknown): RecurrenceRule | null | 'invalid' {
 }
 
 /** Validates one stored event. Returns null if unusable; `repaired` if defaults had to be filled in. */
-export function validateEvent(raw: unknown): { event: CalendarEvent; repaired: boolean } | null {
+function validateEvent(raw: unknown): { event: CalendarEvent; repaired: boolean } | null {
   if (!raw || typeof raw !== 'object') return null;
   const e = raw as Record<string, unknown>;
   if (!isString(e.id) || !e.id || !isIsoInstant(e.start) || !isIsoInstant(e.end)) return null;
@@ -132,10 +107,10 @@ export function validateEvent(raw: unknown): { event: CalendarEvent; repaired: b
   return { event, repaired };
 }
 
-/** Pure parse + migrate + validate step (unit-tested without a browser). */
+/** Pure parse + validate step (unit-tested without a browser). */
 export function parsePersisted(
   raw: string,
-): { data: PersistedCalendar; dropped: number; repaired: number; migratedFrom: number | null } | { error: string } {
+): { data: PersistedCalendar; dropped: number; repaired: number } | { error: string } {
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
@@ -144,20 +119,10 @@ export function parsePersisted(
   }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { error: 'Stored calendar has an unexpected shape.' };
 
-  let record = payload as Record<string, unknown>;
-  // v1 used `version`; v2+ use `schemaVersion`.
-  let version = Number(record.schemaVersion ?? record.version);
-  if (!Number.isInteger(version) || version < 1) return { error: 'Stored calendar has no schema version.' };
-  if (version > SCHEMA_VERSION) return { error: `Stored calendar was written by a newer version (v${version}).` };
-
-  const migratedFrom = version < SCHEMA_VERSION ? version : null;
-  while (version < SCHEMA_VERSION) {
-    const migrate = migrations[version];
-    if (!migrate) return { error: `No migration from schema v${version}.` };
-    record = migrate(record);
-    version++;
+  const record = payload as Record<string, unknown>;
+  if (record.schemaVersion !== SCHEMA_VERSION) {
+    return { error: `Stored calendar has an unsupported schema version (${String(record.schemaVersion)}).` };
   }
-
   if (!Array.isArray(record.events)) return { error: 'Stored calendar has no events list.' };
 
   const seen = new Set<string>();
@@ -184,7 +149,6 @@ export function parsePersisted(
     },
     dropped,
     repaired,
-    migratedFrom,
   };
 }
 

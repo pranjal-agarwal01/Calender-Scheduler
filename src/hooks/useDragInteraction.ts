@@ -46,8 +46,7 @@ interface TimeDragOptions {
 
 interface TimeSession {
   kind: TimeDragKind;
-  pointerId: number;
-  target: Element;
+  stop: () => void;
   occurrence: Occurrence | null;
   title: string;
   originX: number;
@@ -69,6 +68,57 @@ function useLatest<T>(value: T) {
     ref.current = value;
   });
   return ref;
+}
+
+/**
+ * Follows one pointer for the length of a gesture: move/up/cancel on window
+ * (so it keeps working outside the grid) and Escape to cancel.
+ * Returns a function that removes everything again.
+ */
+function trackPointer(
+  target: Element,
+  pointerId: number,
+  onMove: (event: PointerEvent) => void,
+  onEnd: (commit: boolean) => void,
+): () => void {
+  const move = (e: PointerEvent) => {
+    if (e.pointerId === pointerId) onMove(e);
+  };
+  const up = (e: PointerEvent) => {
+    if (e.pointerId === pointerId) onEnd(e.type === 'pointerup');
+  };
+  const key = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    onEnd(false);
+  };
+  try {
+    target.setPointerCapture(pointerId);
+  } catch {
+    /* capture is optional */
+  }
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+  window.addEventListener('keydown', key, true);
+  return () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    window.removeEventListener('keydown', key, true);
+    try {
+      target.releasePointerCapture(pointerId);
+    } catch {
+      /* already released */
+    }
+    document.body.classList.remove('is-dragging');
+  };
+}
+
+/** A press only becomes a drag after the pointer travels a few pixels (otherwise it is a click). */
+function passedThreshold(origin: { originX: number; originY: number }, e: PointerEvent): boolean {
+  return Math.hypot(e.clientX - origin.originX, e.clientY - origin.originY) >= DRAG_THRESHOLD_PX;
 }
 
 export function useDragInteraction(options: TimeDragOptions) {
@@ -186,27 +236,13 @@ export function useDragInteraction(options: TimeDragOptions) {
     if (scrolled) s.frame = requestAnimationFrame(frame);
   }, [latest, computeTimes, renderPreview]);
 
-  const listeners = useRef<{ move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; key: (e: KeyboardEvent) => void } | null>(null);
-
   const finish = useCallback(
     (commit: boolean) => {
       const s = session.current;
       if (!s) return;
       session.current = null;
       if (s.frame !== null) cancelAnimationFrame(s.frame);
-      if (listeners.current) {
-        window.removeEventListener('pointermove', listeners.current.move);
-        window.removeEventListener('pointerup', listeners.current.up);
-        window.removeEventListener('pointercancel', listeners.current.up);
-        window.removeEventListener('keydown', listeners.current.key, true);
-        listeners.current = null;
-      }
-      try {
-        s.target.releasePointerCapture(s.pointerId);
-      } catch {
-        /* already released */
-      }
-      document.body.classList.remove('is-dragging');
+      s.stop();
 
       const cleanup = () => {
         hidePreview();
@@ -235,16 +271,22 @@ export function useDragInteraction(options: TimeDragOptions) {
       if (event.button !== 0 || session.current || !latest.current.columnsRef.current) return;
       event.stopPropagation();
       const { dayIndex, minutes } = slotAt(event.clientX, event.clientY);
-      const target = event.currentTarget as Element;
-      try {
-        target.setPointerCapture(event.pointerId);
-      } catch {
-        /* capture is an optimisation */
-      }
+
+      const onMove = (e: PointerEvent) => {
+        const s = session.current!;
+        s.clientX = e.clientX;
+        s.clientY = e.clientY;
+        if (!s.active) {
+          if (!passedThreshold(s, e)) return;
+          s.active = true;
+          document.body.classList.add('is-dragging');
+          if (s.occurrence) setDraggingKey(s.occurrence.key);
+        }
+        s.frame ??= requestAnimationFrame(frame);
+      };
       session.current = {
         kind,
-        pointerId: event.pointerId,
-        target,
+        stop: trackPointer(event.currentTarget as Element, event.pointerId, onMove, finish),
         occurrence,
         title: occurrence?.event.title ?? 'New event',
         originX: event.clientX,
@@ -258,35 +300,6 @@ export function useDragInteraction(options: TimeDragOptions) {
         start: occurrence?.start ?? 0,
         end: occurrence?.end ?? 0,
       };
-
-      const move = (e: PointerEvent) => {
-        const s = session.current;
-        if (!s || e.pointerId !== s.pointerId) return;
-        s.clientX = e.clientX;
-        s.clientY = e.clientY;
-        if (!s.active) {
-          if (Math.hypot(e.clientX - s.originX, e.clientY - s.originY) < DRAG_THRESHOLD_PX) return;
-          s.active = true;
-          document.body.classList.add('is-dragging');
-          if (s.occurrence) setDraggingKey(s.occurrence.key);
-        }
-        s.frame ??= requestAnimationFrame(frame);
-      };
-      const up = (e: PointerEvent) => {
-        if (e.pointerId !== session.current?.pointerId) return;
-        finish(e.type === 'pointerup');
-      };
-      const key = (e: KeyboardEvent) => {
-        if (e.key !== 'Escape') return;
-        e.preventDefault();
-        e.stopPropagation();
-        finish(false);
-      };
-      listeners.current = { move, up, key };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
-      window.addEventListener('keydown', key, true);
     },
     [finish, frame, latest, slotAt],
   );
@@ -330,8 +343,7 @@ interface DayDragOptions {
 
 interface DaySession {
   kind: 'create' | 'move';
-  pointerId: number;
-  target: Element;
+  stop: () => void;
   occurrence: Occurrence | null;
   originDay: DateKey;
   currentDay: DateKey;
@@ -371,7 +383,6 @@ export function useDayDragInteraction(options: DayDragOptions) {
   const session = useRef<DaySession | null>(null);
   const suppressClickUntil = useRef(0);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
 
   /** Highlights the target days by toggling a data attribute on the day cells. */
   const paint = useCallback(
@@ -407,9 +418,7 @@ export function useDayDragInteraction(options: DayDragOptions) {
       if (!s) return;
       session.current = null;
       if (s.frame !== null) cancelAnimationFrame(s.frame);
-      cleanupRef.current?.();
-      cleanupRef.current = null;
-      document.body.classList.remove('is-dragging');
+      s.stop();
       const clear = () => {
         paint(null);
         setDraggingKey(null);
@@ -421,6 +430,8 @@ export function useDayDragInteraction(options: DayDragOptions) {
       }
       if (!s.active && s.kind === 'move') return clear(); // plain click on an event
       if (s.active) suppressClickUntil.current = performance.now() + 400;
+      // Use the final pointer position: a fast drag can end before the next animation frame ran.
+      s.currentDay = dayAtPoint(s.clientX, s.clientY) ?? s.currentDay;
 
       let result: DayDragResult;
       if (s.kind === 'create') {
@@ -441,16 +452,30 @@ export function useDayDragInteraction(options: DayDragOptions) {
       const day = dayAtPoint(event.clientX, event.clientY);
       if (!day) return;
       event.stopPropagation();
-      const target = event.currentTarget as Element;
-      try {
-        target.setPointerCapture(event.pointerId);
-      } catch {
-        /* optional */
-      }
+
+      const onFrame = () => {
+        const s = session.current;
+        if (!s) return;
+        s.frame = null;
+        const hovered = dayAtPoint(s.clientX, s.clientY);
+        if (hovered) s.currentDay = hovered;
+        paint(s);
+      };
+      const onMove = (e: PointerEvent) => {
+        const s = session.current!;
+        s.clientX = e.clientX;
+        s.clientY = e.clientY;
+        if (!s.active) {
+          if (!passedThreshold(s, e)) return;
+          s.active = true;
+          document.body.classList.add('is-dragging');
+          if (s.occurrence) setDraggingKey(s.occurrence.key);
+        }
+        s.frame ??= requestAnimationFrame(onFrame);
+      };
       session.current = {
         kind,
-        pointerId: event.pointerId,
-        target,
+        stop: trackPointer(event.currentTarget as Element, event.pointerId, onMove, finish),
         occurrence,
         originDay: day,
         currentDay: day,
@@ -460,52 +485,6 @@ export function useDayDragInteraction(options: DayDragOptions) {
         frame: null,
         clientX: event.clientX,
         clientY: event.clientY,
-      };
-
-      const onFrame = () => {
-        const s = session.current;
-        if (!s) return;
-        s.frame = null;
-        const hovered = dayAtPoint(s.clientX, s.clientY);
-        if (hovered && hovered !== s.currentDay) s.currentDay = hovered;
-        paint(s);
-      };
-      const move = (e: PointerEvent) => {
-        const s = session.current;
-        if (!s || e.pointerId !== s.pointerId) return;
-        s.clientX = e.clientX;
-        s.clientY = e.clientY;
-        if (!s.active) {
-          if (Math.hypot(e.clientX - s.originX, e.clientY - s.originY) < DRAG_THRESHOLD_PX) return;
-          s.active = true;
-          document.body.classList.add('is-dragging');
-          if (s.occurrence) setDraggingKey(s.occurrence.key);
-        }
-        s.frame ??= requestAnimationFrame(onFrame);
-      };
-      const up = (e: PointerEvent) => {
-        if (e.pointerId === session.current?.pointerId) finish(e.type === 'pointerup');
-      };
-      const key = (e: KeyboardEvent) => {
-        if (e.key !== 'Escape') return;
-        e.preventDefault();
-        e.stopPropagation();
-        finish(false);
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
-      window.addEventListener('keydown', key, true);
-      cleanupRef.current = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', up);
-        window.removeEventListener('keydown', key, true);
-        try {
-          target.releasePointerCapture(event.pointerId);
-        } catch {
-          /* already released */
-        }
       };
     },
     [finish, paint],

@@ -31,7 +31,7 @@ refresh in action.
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server |
-| `npm test` | Unit tests (Vitest, 64 tests) |
+| `npm test` | Unit tests (Vitest) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript, strict mode |
 | `npm run build` | Type-check and build the static site to `dist/` |
@@ -80,7 +80,7 @@ refresh in action.
 
 **Data, sync and performance**
 - [x] Seeded from `GET /todos` (paged with `skip`, all 254), deterministic times so seeds never move
-- [x] localStorage persistence with a schema version, migrations, per-event validation and corruption recovery
+- [x] localStorage persistence with a schema version, per-event validation and corruption recovery
 - [x] Fake sync (~20% failure) with a saving/saved/failed indicator; failures roll back only the failed change and
   leave later undo steps intact
 - [x] Race-safe: drag, edit, drag again while a save is pending → the final state matches the last action
@@ -118,7 +118,7 @@ Zustand, and history uses the command pattern.
 
 Tests cover the risky logic: time-zone conversion across DST, recurrence (month ends, nth weekday, counts, DST,
 exdates), recurring edits and deletes, overlap layout, undo/redo and every rollback ordering, persistence recovery
-and migration, the single-flight token refresh, form validation, conflicts and URL parsing.
+the single-flight token refresh, form validation, conflicts and URL parsing.
 
 ## Known limitations
 

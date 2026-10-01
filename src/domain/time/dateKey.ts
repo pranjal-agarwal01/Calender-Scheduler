@@ -99,19 +99,6 @@ export function startOfMonth(key: DateKey): DateKey {
   return toDateKey(year, month, 1);
 }
 
-export function compareDateKeys(a: DateKey, b: DateKey): number {
-  // ISO date strings sort lexicographically in chronological order.
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-
-export function minDateKey(a: DateKey, b: DateKey): DateKey {
-  return a <= b ? a : b;
-}
-
-export function maxDateKey(a: DateKey, b: DateKey): DateKey {
-  return a >= b ? a : b;
-}
-
 /** Inclusive list of consecutive date keys. */
 export function dateRange(start: DateKey, count: number): DateKey[] {
   return Array.from({ length: count }, (_, i) => addDays(start, i));

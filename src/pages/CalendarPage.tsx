@@ -21,14 +21,11 @@ import { useAuthStore } from '../store/authStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useUsersStore } from '../store/usersStore';
 import { useUiStore } from '../store/uiStore';
-import { todayKey, zonedToUtc } from '../domain/time/zoned';
+import { minutesInZone, todayKey, zonedToUtc } from '../domain/time/zoned';
 import { parseDateKey } from '../domain/time/dateKey';
 import type { AuthUser, EventDraft, Occurrence } from '../domain/types';
-import { DEFAULT_EVENT_MINUTES, SNAP_MINUTES } from '../config';
-
-function isTypingTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
-}
+import { DEFAULT_EVENT_MINUTES } from '../config';
+import { shortcutsBlocked } from '../utils/keyboard';
 
 /** Layout route for /calendar and /events/:eventId (the details dialog opens on top). */
 export function CalendarPage() {
@@ -82,10 +79,9 @@ export function CalendarPage() {
       if (request) {
         ({ start, end } = request);
       } else {
-        // Toolbar "Create": next free quarter hour today, or 9:00 on the viewed date.
-        const baseDay = calendar.date === today || !parseDateKey(calendar.date) ? today : calendar.date;
-        const minutes = baseDay === today ? Math.ceil(((now - zonedToUtc(today, 0, timeZone)) / 60_000 + 1) / SNAP_MINUTES) * SNAP_MINUTES : 9 * 60;
-        start = zonedToUtc(baseDay, Math.min(minutes, 23 * 60), timeZone);
+        // "Create" button: the next full hour today, or 9:00 on the date being viewed.
+        const nextHour = Math.min(23, Math.floor(minutesInZone(now, timeZone) / 60) + 1) * 60;
+        start = zonedToUtc(calendar.date, calendar.date === today ? nextHour : 9 * 60, timeZone);
         end = start + DEFAULT_EVENT_MINUTES * 60_000;
       }
       const draft: EventDraft = {
@@ -115,9 +111,7 @@ export function CalendarPage() {
   // Global single-key shortcuts (ignored while typing or when a dialog is open).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
-      const ui = useUiStore.getState();
-      if (ui.editor || ui.scopePrompt || ui.keyboardMove || document.querySelector('[aria-modal="true"]')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || shortcutsBlocked(e)) return;
       const key = e.key.toLowerCase();
       if (key === 't') goToday();
       else if (key === 'n' || key === 'j') goNext();

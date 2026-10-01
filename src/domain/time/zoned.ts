@@ -6,10 +6,9 @@
  * (wall-clock -> UTC). Both directions go through `offsetAt`, the zone's UTC
  * offset at a given instant.
  */
-import { addDays, dateKeyToUtcMs, DAY_MS, parseDateKey, toDateKey, type DateKey } from './dateKey';
+import { addDays, DAY_MS, parseDateKey, toDateKey, type DateKey } from './dateKey';
 
-export const MINUTE_MS = 60_000;
-export const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
 const QUARTER_HOUR_MS = 15 * MINUTE_MS;
 
 export interface WallTime {
@@ -188,7 +187,3 @@ export function browserTimeZone(): string {
 
 /** All-day events are "floating" dates stored as UTC midnight, so they never shift between zones. */
 export const FLOATING_ZONE = 'UTC';
-
-export function allDayStartMs(key: DateKey): number {
-  return dateKeyToUtcMs(key);
-}

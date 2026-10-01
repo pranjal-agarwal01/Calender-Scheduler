@@ -31,10 +31,6 @@ export class ApiError extends Error {
   }
 }
 
-export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
-}
-
 const DEFAULT_MESSAGES: Record<ApiErrorCode, string> = {
   NETWORK: "Can't reach the server. Check your connection and try again.",
   TIMEOUT: 'The server took too long to respond. Please try again.',
@@ -73,8 +69,4 @@ export function toApiError(error: unknown): ApiError {
   }
   if (error instanceof Error) return new ApiError({ code: 'UNKNOWN', message: error.message || DEFAULT_MESSAGES.UNKNOWN });
   return new ApiError({ code: 'UNKNOWN', message: DEFAULT_MESSAGES.UNKNOWN });
-}
-
-export function defaultMessage(code: ApiErrorCode): string {
-  return DEFAULT_MESSAGES[code];
 }

@@ -287,7 +287,7 @@ export function EventEditor({ editor, timeZone, onCreate, onUpdate }: EventEdito
                     aria-label={EVENT_COLOR_CLASSES[color].label}
                   />
                   <span
-                    className={`block h-6 w-6 rounded-full ${EVENT_COLOR_CLASSES[color].swatch} ring-offset-2 peer-checked:ring-2 peer-checked:ring-slate-700 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500`}
+                    className={`block h-6 w-6 rounded-full ${EVENT_COLOR_CLASSES[color].dot} ring-offset-2 peer-checked:ring-2 peer-checked:ring-slate-700 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500`}
                   />
                 </label>
               ))}

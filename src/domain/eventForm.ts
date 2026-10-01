@@ -31,7 +31,7 @@ export type FormErrors = Partial<Record<FormField, string>>;
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-export function minutesToTime(minutes: number): string {
+function minutesToTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 

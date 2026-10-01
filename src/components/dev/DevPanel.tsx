@@ -11,9 +11,9 @@ import { storageKey } from '../../store/persistence';
 import { toApiError } from '../../api/apiError';
 
 /**
- * Tools to demo the "hard" requirements on the live site: sync failure rate,
- * slow network (?delay=3000), single-flight token refresh, 500-event
- * performance, and corrupted-storage recovery.
+ * Developer tools for exercising failure paths: sync failure rate, slow network
+ * (?delay=3000), concurrent token refresh, a 500-event load test and
+ * corrupted-storage recovery.
  */
 export function DevPanel({ onClose, timeZone, anchor }: { onClose: () => void; timeZone: string; anchor: string }) {
   const { failureRate, slowNetwork, setFailureRate, setSlowNetwork } = useDevSettings();
