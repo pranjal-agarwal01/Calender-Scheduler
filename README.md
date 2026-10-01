@@ -4,7 +4,7 @@ A Google-Calendar-style scheduler built with **React 19, Tailwind CSS v4 and Axi
 [DummyJSON](https://dummyjson.com/docs) API. Log in, then create, drag, resize and repeat events, with full
 undo/redo, time-zone switching and a fake sync layer that fails 20% of the time and rolls back cleanly.
 
-**Live demo:** _add your Vercel/Netlify URL here_
+**Live demo:** https://calender.pranjalagarwal.me (hosted on Vercel) · **Repo:** https://github.com/pranjal-agarwal01/Calender-Scheduler
 
 ![Week view](docs/week-view.jpg)
 
